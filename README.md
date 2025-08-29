@@ -11,6 +11,10 @@ The goal was to build the 2 car from scratch, control them wirelessly using:
 * Bluetooth module (as used in model APEX)  
 * Mobile BT App (seen in model NOVA)
 
+  
+-![Preview_Image](car1.PNG)
+
+
 ---
 
 ## 🛠 Components Used 
@@ -270,6 +274,7 @@ It's more of a compatability problem across devices where serial communication i
 for line follower feature, used in warehouses
 ### 5. Camera Module
 for object distinction and possible QR/bar code scanning 
+
 
 
 
