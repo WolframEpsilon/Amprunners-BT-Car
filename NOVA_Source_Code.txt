@@ -1,0 +1,269 @@
+#include <Servo.h>
+
+//----- H-Bridge Pins --------
+#define IN1 3
+#define IN2 5
+#define IN3 6
+#define IN4 9
+
+//--------- Servo ---------
+#define servopin 4
+Servo steer;
+int steerPosition = 90;
+
+//--------ultrasonic------
+#define trigPin 8
+#define echoPin A0
+float distance,time ;
+bool stopFlag=false;
+// Non-blocking ultrasonic variables
+unsigned long ultrasonicTime = millis();
+bool ultrasonicMask = false;
+#define ULTRASONIC_INTERVAL 50  // Check every 50ms instead of every loop
+
+//------leds------------
+#define backled 13
+#define reverseLED 12
+#define frontLED 11
+bool isOn=false;
+
+//-------buzzer------
+#define buzz 2
+bool horn=false;
+
+//-------Variables-------
+char read = '0';
+char lastcommand;
+char direction='0';
+bool alert = false;  
+int speed=255; 
+
+//-----timing-----------
+unsigned long alertTime=millis();
+bool mask=false;
+unsigned long revTime=millis();
+bool mask2=false;
+unsigned long ledTime=millis();
+bool mask3=false;
+
+//----------------------------setup---------------------------------
+void setup() {
+  Serial.begin(9600);
+
+  //------ultrasonic--------
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  //----------DC motors------
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+
+  //-------light system------
+  pinMode(backled, OUTPUT);
+  pinMode(frontLED, OUTPUT);
+  pinMode(reverseLED, OUTPUT);
+
+  //------buzzer(horn)-------
+  pinMode(buzz, OUTPUT);
+
+  //----servo(steering)--------
+  steer.attach(servopin);
+  steer.write(steerPosition);
+}
+
+void loop() {
+  // Non-blocking ultrasonic check - only runs every ULTRASONIC_INTERVAL ms
+  if (millis() - ultrasonicTime >= ULTRASONIC_INTERVAL) {
+    ultrasonic();
+    ultrasonicTime = millis();
+  }
+
+  if (Serial.available()) {
+    read = Serial.read();
+    if (read != '0' && read != 'o' && read != 'U' && read != 'D') {
+      lastcommand = read;
+    }
+  }
+
+  switch (read) {
+    case 'F':  
+      if(!stopFlag){
+        forward();
+        digitalWrite(backled,LOW); 
+        digitalWrite(buzz,LOW);
+      } else {
+        stop();
+        digitalWrite(backled,HIGH);
+        buzzAlert();
+      }
+      break;
+
+    case 'B': 
+      digitalWrite(backled,LOW); 
+      backward(); 
+      buzzRev();  
+      ledRev(); 
+      break;
+
+    case 'L':  // steer + right motor
+      steerPosition = constrain(steerPosition + 10, 70, 110); 
+      digitalWrite(IN1,0);
+      digitalWrite(IN2,speed);
+      digitalWrite(IN3,0);
+      digitalWrite(IN4,0);
+      steer.write(steerPosition); 
+      direction='L';
+      break;
+
+    case 'R':  // steer + left motor
+      steerPosition = constrain(steerPosition - 10, 70, 110); 
+      digitalWrite(IN1,0);
+      digitalWrite(IN2,0);
+      digitalWrite(IN3,0);
+      digitalWrite(IN4,speed);
+      steer.write(steerPosition);
+      direction='R';
+      break;
+
+    case 'N':  
+      if (isOn) {
+        digitalWrite(frontLED,LOW); 
+        isOn=false;
+      } else {
+        digitalWrite(frontLED,HIGH); 
+        isOn=true;
+      } 
+      break;
+
+    case 'H': 
+      digitalWrite(buzz,HIGH); 
+      horn=true; 
+      break;
+
+    case 'o': 
+      if(horn){
+        digitalWrite(buzz,LOW); 
+        horn=false;
+      } 
+      break;
+
+    case 'U': 
+      if (speed < 250) speed += 10;
+      Serial.print("Speed increased to: ");
+      Serial.println(speed);
+      break;
+
+    case 'D': 
+      if (speed > 10 ) speed -= 10;
+      Serial.print("Speed decreased to: ");
+      Serial.println(speed);
+      break;
+
+    case '0':
+      stop(); 
+      steerPosition =90 ; 
+      steer.write(steerPosition);  
+      digitalWrite(backled,HIGH); 
+      digitalWrite(buzz,LOW); 
+      digitalWrite(reverseLED,LOW); 
+      lastcommand='0';
+      break;
+
+    default:  
+      stop(); 
+      digitalWrite(buzz, LOW); 
+      digitalWrite(reverseLED, LOW); 
+      horn = false; 
+      digitalWrite(backled,HIGH); 
+      break;
+  }
+
+  // --- KEEP DRIVING at updated speed ---
+  if (lastcommand == 'F' && !stopFlag) {
+    forward();
+  } else if (lastcommand == 'B') {
+    backward();
+  }
+}
+
+//-------functions------------
+void forward() {
+  analogWrite(IN1, 0);
+  analogWrite(IN2, speed);
+  analogWrite(IN3, 0);
+  analogWrite(IN4, speed);
+  direction='F';
+}
+
+void backward() {
+  analogWrite(IN1, speed);
+  analogWrite(IN2, 0);
+  analogWrite(IN3, speed);
+  analogWrite(IN4, 0);
+  direction='B';
+}
+
+void stop() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+}
+
+void buzzRev(){
+  if(millis()-revTime >= 500 && !mask2){
+    digitalWrite(buzz,HIGH);
+    revTime=millis();
+    mask2=true;
+  }
+  if(millis()-revTime >= 500 && mask2){
+    digitalWrite(buzz,LOW);
+    revTime=millis();
+    mask2=false;
+  }
+}
+
+void buzzAlert(){
+  if(millis()-alertTime >= 300 && !mask){
+    digitalWrite(buzz,HIGH);
+    alertTime=millis();
+    mask=true;
+  }
+  if(millis()-alertTime >= 300 && mask){
+    digitalWrite(buzz,LOW);
+    alertTime=millis();
+    mask=false;
+  }
+}
+
+void ledRev(){
+  if(millis()-ledTime >= 1000 && !mask3){
+    digitalWrite(reverseLED,HIGH);
+    ledTime=millis();
+    mask3=true;
+  }
+  if(millis()-ledTime >= 1000 && mask3){
+    digitalWrite(reverseLED,LOW);
+    ledTime=millis();
+    mask3=false;
+  }
+}
+
+void ultrasonic(){
+  digitalWrite(trigPin, LOW); 
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  time = pulseIn(echoPin, HIGH);
+  distance = time * 0.034 / 2;
+
+  if (((distance < 25) && (distance > 0)) && (direction=='F')) {
+    stopFlag = true;
+  } else {
+    stopFlag = false;
+  }
+}
