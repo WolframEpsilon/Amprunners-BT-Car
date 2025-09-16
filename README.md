@@ -24,7 +24,7 @@ The goal was to build two cars from scratch, control them wirelessly using:
 * Bluetooth module (as used in model APEX)  
 * Mobile BT App (seen in model NOVA)
   
-### [Amprunners Controller App (Android)](Amprunners_controller.apk)
+### [📱 Amprunners Controller App (Android)](Amprunners_controller.apk)
 ### [🎥 Watch Demo Video (MP4)](docs/Demo.mp4)
 ---
 
@@ -90,7 +90,7 @@ The goal was to build two cars from scratch, control them wirelessly using:
 
 ---
 
-## 💻 Code
+## Code
 Main features of the code:
 - Reads instructions from BT module/App.  
 - Controls motors' speed (3 in each direction) via H-Bridge.
@@ -326,3 +326,4 @@ for object distinction or QR code scanning
 * Car Speed Subsystem
 
 * intermediate Code developer
+
